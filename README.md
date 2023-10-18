@@ -2,4 +2,6 @@
 
 ## Trying the none alg attack
 
-### link: https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+- referenced article : https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+
+## Algo Confusion Attack

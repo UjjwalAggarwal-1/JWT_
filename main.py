@@ -1,4 +1,6 @@
 from hashlib import sha256
+from hmac import new as hmac_new
+import base64
 
 enc_di = {
         "000000": "A",	
@@ -69,42 +71,83 @@ enc_di = {
 
 dec_di = {v: k for k, v in enc_di.items()}
 
-def encode_base64(data):    
+def encode_base64(data):
     print('[-] encode....')
     bin_data = ''.join(format(format(ord(x), 'b'),"0>8") for x in data)
+    
     k = (len(bin_data)%24)
-    if k == 8:
-        bin_data += "00111101"*2
-    elif k == 16:
-        bin_data += "00111101"
+    if k == 16:
+        bin_data += "00"
+    elif k == 8:
+        bin_data += "0000"
     
     op = ""
     for i in range(0,len(bin_data),6):
         op += enc_di[bin_data[i:i+6]]
     
+    ## padding
+    # if k == 16:
+    #     op += "="
+    # elif k == 8:
+    #     op += "=="
+    
     return op
 
 def decode_base64(data):
     print('[-] decode....')
-    _data = ""
-    for i in data:
-        _data += dec_di[i]
+    
+    ## padding
+    # if data[-2:] == "==":
+    #     data = data[:-2]
+    # elif data[-1] == "=":
+    #     data = data[:-1]
+    
+    _data = "".join(dec_di[i] for i in data)
+
     op = ""
-    for i in range(0,len(_data),8):
+    for i in range(0,len(_data)-len(_data)%8,8):
         op += chr(int(_data[i:i+8],2))
+    
     return op
 
 
+# print(encode_base64("light work."), decode_base64(encode_base64("light work.")))
+# print(encode_base64("light work"), decode_base64(encode_base64("light work")))
+# print(encode_base64("light wor"), decode_base64(encode_base64("light wor")))
+# print(encode_base64("light wo"), decode_base64(encode_base64("light wo")))
+# print(encode_base64("light w"), decode_base64(encode_base64("light w")))
+# print(encode_base64("Ma"), decode_base64(encode_base64("Ma")))
+
+
+def print_comp(a,b):
+    print(a)
+    print(b)
+
+    for i in range(len(a)):
+        if a[i] != b[i]:
+            break
+        else:
+            print(f"\033[92m{a[i]}\033[0m",end="")
+    
+    print()
+
 
 header = '{"alg":"HS256","typ":"JWT"}'
-payload = '{"token_type":"access","exp":1697620260,"iat":1697584260,"jti":"e7f76280e83f424da3596bd24f53d2ad","user_id":3}'
+payload = '{"sub":"1234567890","name":"John Doe","iat":1516239022}'
 eh = encode_base64(header)
 ep = encode_base64(payload)
-signature = sha256((f'{eh}.{ep}').encode('ascii')).hexdigest()
-token = f"{eh}.{ep}.{signature}"
-print(token)
 
-token_ = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk3NjIwNjcxLCJpYXQiOjE2OTc1ODQ2NzEsImp0aSI6IjhmYjQ5MGNmNzk0MzRiMWVhYWVlMTgzNzg2MWE1NjZhIiwidXNlcl9pZCI6Mn0.duclSmI1jB8pA1SNHjBNmi6rUX9GSWVQH24_oTwh0G0'
-rt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTcyOTEyMDI2MCwiaWF0IjoxNjk3NTg0MjYwLCJqdGkiOiIyMTYxYWY1YzY3NTg0ZDdjOWQ2ZjMyZTEzYmEzNjUwOSIsInVzZXJfaWQiOjJ9.VgASqOmHLnu4Dp9Dqh5TWt2ppocBKSQhYjDUk73Trhs'
-print(decode_base64(token_.split('.')[0]))
-print(decode_base64(token_.split('.')[1]))
+key = b''
+signature = (hmac_new(key, f"{eh}.{ep}".encode('ascii'), sha256).digest())
+signature = base64.b64encode(signature).decode('ascii')
+if signature[-1] == "=":
+    signature = signature[:-1]
+if signature[-1] == "=":
+    signature = signature[:-1]
+signature = signature.replace("/", "_")
+token = f"{eh}.{ep}.{signature}"
+comp = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+print_comp(token, comp)
+
+print(decode_base64(token.split('.')[1]))
+print(decode_base64(comp.split('.')[1]))
